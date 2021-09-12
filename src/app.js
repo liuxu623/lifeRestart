@@ -13,7 +13,6 @@ class App{
     #talentSelected = new Set();
     #totalMax=20;
     #isEnd = false;
-    #selectedExtendTalent = null;
     #hintTimeout;
     #specialthanks;
     #autoTrajectory;
@@ -81,7 +80,10 @@ class App{
 
         indexPage
             .find('#restart')
-            .click(()=>this.switch('talent'));
+            .click(() => {
+                this.switch('talent');
+                this.#pages.talent.start();
+            });
 
         indexPage
             .find('#achievement')
@@ -199,8 +201,7 @@ class App{
         // Talent
         const talentPage = $(`
         <div id="main">
-            <div class="head" style="font-size: 1.6rem">天赋抽卡</div>
-            <button id="random" class="mainbtn" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);"">10连抽！</button>
+            <div class="head" style="font-size: 1.6rem">选择天赋</div>
             <ul id="talents" class="selectlist"></ul>
             <button id="next" class="mainbtn">请选择3个</button>
         </div>
@@ -209,52 +210,6 @@ class App{
         const createTalent = ({ grade, name, description }) => {
             return $(`<li class="grade${grade}b">${name}（${description}）</li>`)
         };
-
-        talentPage
-            .find('#random')
-            .click(()=>{
-                talentPage.find('#random').hide();
-                const ul = talentPage.find('#talents');
-                this.#life.talentRandom()
-                    .forEach(talent=>{
-                        const li = createTalent(talent);
-                        ul.append(li);
-                        li.click(()=>{
-                            if(li.hasClass('selected')) {
-                                li.removeClass('selected')
-                                this.#talentSelected.delete(talent);
-                                if(this.#talentSelected.size<3) {
-                                    talentPage.find('#next').text('请选择3个')
-                                }
-                            } else {
-                                if(this.#talentSelected.size==3) {
-                                    this.hint('只能选3个天赋');
-                                    return;
-                                }
-
-                                const exclusive = this.#life.exclusive(
-                                    Array.from(this.#talentSelected).map(({id})=>id),
-                                    talent.id
-                                );
-                                if(exclusive != null) {
-                                    for(const { name, id } of this.#talentSelected) {
-                                        if(id == exclusive) {
-                                            this.hint(`与已选择的天赋【${name}】冲突`);
-                                            return;
-                                        }
-                                    }
-                                    return;
-                                }
-                                li.addClass('selected');
-                                this.#talentSelected.add(talent);
-                                if(this.#talentSelected.size==3) {
-                                    talentPage.find('#next').text('开始新人生')
-                                }
-                            }
-                        });
-                    });
-                talentPage.find('#next').show()
-            });
 
         talentPage
             .find('#next')
@@ -413,7 +368,8 @@ class App{
             <ul id="lifeTrajectory" class="lifeTrajectory"></ul>
             <div class="btn-area">
                 <button id="auto" class="mainbtn">自动播放</button>
-                <button id="auto2x" class="mainbtn">自动播放2x</button>
+<!--                <button id="auto2x" class="mainbtn">自动播放2x</button>-->
+                <button id="auto10x" class="mainbtn">自动播放10x</button>
                 <button id="summary" class="mainbtn">人生总结</button>
                 <button id="domToImage" class="mainbtn">人生回放</button>
             </div>
@@ -448,7 +404,8 @@ class App{
                     this.#isEnd = true;
                     trajectoryPage.find('#summary').show();
                     trajectoryPage.find('#auto').hide();
-                    trajectoryPage.find('#auto2x').hide();
+                    // trajectoryPage.find('#auto2x').hide();
+                    trajectoryPage.find('#auto10x').hide();
                     // trajectoryPage.find('#domToImage').show();
                 }
                 const property = this.#life.getLastRecord();
@@ -515,10 +472,12 @@ class App{
         trajectoryPage
             .find('#auto')
             .click(()=>auto(1000));
+        // trajectoryPage
+        //     .find('#auto2x')
+        //     .click(()=>auto(500));
         trajectoryPage
-            .find('#auto2x')
-            .click(()=>auto(500));
-
+            .find('#auto10x')
+            .click(()=>auto(100));
         // Summary
         const summaryPage = $(`
         <div id="main">
@@ -531,10 +490,10 @@ class App{
                 <li class="grade0"><span>享年：</span><span>3岁 早夭</span></li>
                 <li class="grade0"><span>快乐：</span><span></span>3级 不太幸福的人生</li>
             </ul>
-            <div class="head" style="height:auto;">天赋，你可以选一个，下辈子还能抽到</div>
-            <ul id="talents" class="selectlist" style="flex: 0 1 auto;">
-                <li class="grade2b">黑幕（面试一定成功）</li>
-            </ul>
+<!--            <div class="head" style="height:auto;">天赋，你可以选一个，下辈子还能抽到</div>-->
+<!--            <ul id="talents" class="selectlist" style="flex: 0 1 auto;">-->
+<!--                <li class="grade2b">黑幕（面试一定成功）</li>-->
+<!--            </ul>-->
             <button id="again" class="mainbtn"><span class="iconfont">&#xe6a7;</span>再次重开</button>
         </div>
         `);
@@ -543,8 +502,6 @@ class App{
             .find('#again')
             .click(()=>{
                 this.times ++;
-                this.#life.talentExtend(this.#selectedExtendTalent);
-                this.#selectedExtendTalent = null;
                 this.#talentSelected.clear();
                 this.#totalMax = 20;
                 this.#isEnd = false;
@@ -678,6 +635,48 @@ class App{
                     talentPage.find('#random').show();
                     this.#totalMax = 20;
                 },
+                start: () => {
+                    const ul = talentPage.find('#talents');
+                    this.#life.talentRandom()
+                        .forEach(talent=>{
+                            const li = createTalent(talent);
+                            ul.append(li);
+                            li.click(()=>{
+                                if(li.hasClass('selected')) {
+                                    li.removeClass('selected')
+                                    this.#talentSelected.delete(talent);
+                                    if(this.#talentSelected.size<3) {
+                                        talentPage.find('#next').text('请选择3个')
+                                    }
+                                } else {
+                                    if(this.#talentSelected.size==3) {
+                                        this.hint('只能选3个天赋');
+                                        return;
+                                    }
+
+                                    const exclusive = this.#life.exclusive(
+                                        Array.from(this.#talentSelected).map(({id})=>id),
+                                        talent.id
+                                    );
+                                    if(exclusive != null) {
+                                        for(const { name, id } of this.#talentSelected) {
+                                            if(id == exclusive) {
+                                                this.hint(`与已选择的天赋【${name}】冲突`);
+                                                return;
+                                            }
+                                        }
+                                        return;
+                                    }
+                                    li.addClass('selected');
+                                    this.#talentSelected.add(talent);
+                                    if(this.#talentSelected.size==3) {
+                                        talentPage.find('#next').text('开始新人生')
+                                    }
+                                }
+                            });
+                        });
+                    talentPage.find('#next').show()
+                },
             },
             property: {
                 page: propertyPage,
@@ -704,7 +703,8 @@ class App{
                     trajectoryPage.find('#lifeTrajectory').empty();
                     trajectoryPage.find('#summary').hide();
                     trajectoryPage.find('#auto').show();
-                    trajectoryPage.find('#auto2x').show();
+                    // trajectoryPage.find('#auto2x').show();
+                    trajectoryPage.find('#auto10x').show();
                     this.#isEnd = false;
                 },
                 born: contents => {
@@ -743,14 +743,7 @@ class App{
                             talents.append(li);
                             li.click(()=>{
                                 if(li.hasClass('selected')) {
-                                    this.#selectedExtendTalent = null;
                                     li.removeClass('selected');
-                                } else if(this.#selectedExtendTalent != null) {
-                                    this.hint('只能继承一个天赋');
-                                    return;
-                                } else {
-                                    this.#selectedExtendTalent = talent.id;
-                                    li.addClass('selected');
                                 }
                             });
                             if(!i) li.click();
